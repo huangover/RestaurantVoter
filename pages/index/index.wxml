@@ -1,0 +1,29 @@
+<view class='wholeContainer'>
+
+<scroll-view class='scrollView'>
+  <view class='restaurantContainerView' wx:for="{{votes}}" >
+    <text class='restaurantLabel'bindtap='restaurantTapped'>{{item}}</text>
+    <text class='detailLabel' bindtap='detailLabelTapped'>详情</text>
+  </view>
+</scroll-view>
+
+<view class='addImageContainerView'>
+  <image class='addImage' mode='aspectFill' src='../resources/addButton.png'></image>
+  <button class='addButton' bindtap='addButtonTapped'>{{addBtnTitle}}</button>
+</view>
+
+<view class='participantContainerView'>
+  <text class='participantTitleView' >参与者</text> 
+  <label class='participantWrapper'>
+    <view class='participantContainer'  wx:for="{{participants}}">
+    <!-- 怎样用遍历数组设置z-index？？？？ -->
+         <image class='participantImage' style='z-index:{{item.zIndex}}'>{{item.name}}</image> 
+    </view>
+  </label>
+</view>
+
+
+<view style='float: bottom'>截止日期</view>
+
+
+</view>

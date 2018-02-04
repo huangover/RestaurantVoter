@@ -1,0 +1,8 @@
+<!-- template不能通过include加载，需要通过import加载 -->
+<template name="footer1">
+这是底部内容1
+</template>
+
+<template name="footer2">
+这是底部内容1 - {{text}}
+</template>
