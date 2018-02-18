@@ -1,0 +1,36 @@
+<scroll-view scroll-y class='container'> 
+
+<view class='contentContainer'>
+  <input type="{{inputType}}" placeholder='投票标题' placeholder-style='color:gainsboro;opacity:0.4' class='titleInput' bindinput='titleChanged'></input>
+  <input type="{{inputType}}" placeholder='描述(选填)' placeholder-style='color:gainsboro;opacity:0.4' class='descriptionInput' bindinput='descriptionChanged'></input>
+  <view wx:for="{{votes}}" class='itemCell'>
+    <view class='deleteButton' bindtap='deleteButtonTapped' data-id='{{index}}'>-</view>
+    <input type="{{inputType}}" placeholder='选项' class='itemInput' value='{{item}}'></input>
+  </view>
+  <view class='addContainerView' bindtap='addButtonTapped'>
+    <view class='addButton'>+</view>
+    <text class='addTitle'>添加选项</text>
+  </view>
+  
+</view>
+
+<view class='deadLineContainer'>
+  <text class='deadLineText'>截止日期</text>
+
+  <picker mode='date' start="{{deadlineDate}}" value="{{deadlineDate}}" bindchange="datePickerValueChanged">
+    <text class='dateInput' bindtap='dateInputTapped'>{{deadlineDate}}</text>
+  </picker>
+  
+  <picker mode="time" start="00:00" value="{{deadlineTime}}" bindchange='timePickerValueChanged'>
+    <text class='timeInput' bindtap='timeInputTapped'>{{deadlineTime}}</text>
+  </picker> 
+</view>
+
+<button class='finishButton' type='primary' bindtap='finishButtonTapped'>完成</button>
+
+</scroll-view> 
+
+<!-- 输入新选线的提示框 -->
+<modal title="请输入新选项" hidden="{{modalHidden}}" bindcancel="onModalCancel" bindconfirm="onModalConfirm">
+  <view><input class="input" value="{{newVoteValue}}" placeholder="选项" bindinput="newVoteChanged"></input></view>
+</modal>

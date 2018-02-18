@@ -1,0 +1,95 @@
+Page{
+  height: 100%;
+}
+.container{
+  /* display: flex;
+  flex-direction: column;
+  align-items: center; */
+  height: 100%;
+}
+
+/* 内容 */
+.contentContainer{
+  padding-left: 5%;
+  display: flex;
+  flex-direction: column;
+}
+.titleInput{
+  font-size: 20px;
+  height: 60px;
+  border-bottom: 1px solid gainsboro;
+}
+.descriptionInput{
+  font-size: 16px;
+  height: 60px;
+  border-bottom: 1px solid gainsboro;
+}
+.itemCell{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 50px;
+}
+.deleteButton{
+  text-align: center;
+  border-radius: 55px;
+  background-color: red;
+  color: white;
+  font-weight: 700;
+  width: 25px;
+  height: 25px;
+}
+.itemInput{
+  margin-left: 10px;
+  /* background-color: purple; */
+  height: 100%;
+  width: 100%;
+  color: black;
+  border-bottom: 1px solid gainsboro;
+}
+.addContainerView {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 50px;
+}
+.addButton{
+  /* border-radius: 10px; */
+  text-align: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 55px;
+  background-color: blue;
+  color: white; 
+}
+.addTitle {
+  margin-left: 10px;
+  color: blue;
+}
+
+/* 截止日期 */
+.deadLineContainer{
+  margin-top: 5px;
+  display: flex;
+  flex-direction: row;
+  align-items: center; 
+  justify-content: space-around;
+  padding-right: 5%;
+  height: 50px;
+}
+.dateInput{
+  /* flex-grow: 5; */
+  text-align: right;
+  color: lightgray; 
+}
+.timeInput{
+  /* flex-grow: 5; */
+  color: lightgray; 
+}
+
+/* 完成按键 */
+.finishButton {
+  margin-top: 100px;
+  width: 80%;
+}

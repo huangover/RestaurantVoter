@@ -1,29 +1,40 @@
-<view class='wholeContainer'>
+<scroll-view scroll-y class='scrollView'>
 
-<scroll-view class='scrollView'>
-  <view class='restaurantContainerView' wx:for="{{votes}}" >
-    <text class='restaurantLabel'bindtap='restaurantTapped'>{{item}}</text>
-    <text class='detailLabel' bindtap='detailLabelTapped'>详情</text>
+<!-- 新建投票 -->
+<button class='addButton' bindtap='createVoteTapped'> 
+<!-- <view class='addContainer' bindtap='createVoteTapped'> -->
+  <view class='addOuterRectangle'>
+    <view class='addInnerRectangle'>
+       <view class='horizontalLine'></view> 
+       <view class='verticalLine'></view>   
+    </view>  
+    <text class='createVoteTitle'>新建投票</text>
   </view>
+<!-- </view> -->
+</button>
+
+<!-- 正在投票 -->
+<view class='votesContainer' hidden='{{hideValidSessionView}}'>
+  <text class='votingSectionTitle'>正在投票</text>
+  <view class='votesListContainer' wx:for="{{validSessions}}">
+    <view class='listCell' bindtap='currentVoteTapped' data-id='{{index}}'>
+      <text class='voteName'>{{item.title}}</text>
+      <icon type='info' class='detailDisclosureIcon'></icon>
+    </view>
+  </view>
+</view>
+
+<!-- 往期投票 -->
+
+<view class='votesContainer' hidden='{{hideExpiredSessionView}}' >
+  <text class='votingSectionTitle'>往期投票</text>
+  <view class='votesListContainer' wx:for="{{expiredSessions}}">
+    <view class='listCell' bindtap='pastVoteTapped' data-id='{{index}}'>
+      <text class='voteName'>{{item.title}}</text>
+      <icon type='info' class='detailDisclosureIcon'></icon>
+    </view>
+  </view>
+</view>
+
 </scroll-view>
 
-<view class='addImageContainerView'>
-  <image class='addImage' mode='aspectFill' src='../resources/addButton.png'></image>
-  <button class='addButton' bindtap='addButtonTapped'>{{addBtnTitle}}</button>
-</view>
-
-<view class='participantContainerView'>
-  <text class='participantTitleView' >参与者</text> 
-  <label class='participantWrapper'>
-    <view class='participantContainer'  wx:for="{{participants}}">
-    <!-- 怎样用遍历数组设置z-index？？？？ -->
-         <image class='participantImage' style='z-index:{{item.zIndex}}'>{{item.name}}</image> 
-    </view>
-  </label>
-</view>
-
-
-<view style='float: bottom'>截止日期</view>
-
-
-</view>
