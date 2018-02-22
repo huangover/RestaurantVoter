@@ -1,8 +1,7 @@
+const app = getApp();
 var _this;
 var Bmob = require('../../utils/bmob.js');
-var _voteObjectName = 'Vote';
 var _sessionObjectName = 'Session';
-var bmob_vote = Bmob.Object.extend(_voteObjectName);
 var bmob_session = Bmob.Object.extend(_sessionObjectName);
 
 Page({
@@ -14,7 +13,15 @@ Page({
     validSessions: null,
     expiredSessions: null,
     hideExpiredSessionView: true,
-    hideValidSessionView: true
+    hideValidSessionView: true,
+    shareData: {
+      title: '自定义分享标题',
+      desc: '自定义分享描述',
+      path: '/pages/index/index'
+    }
+  },
+  onShareAppMessage: function () {
+    return this.data.shareData
   },
 
   /**
@@ -22,53 +29,76 @@ Page({
    */
   onLoad: function (options) {
     _this = this;
-    fetchSessions();
-  },
-
-  /**
-   * 生命周期函数--监听页面初次渲染完成
-   */
+    if (app.globalData.openid) {
+      console.log("on load, app.globalData is already set");
+      fetchSessions();
+      // this.setData({
+      //   userInfo: app.globalData.userInfo,
+      //   hasUserInfo: true
+      // })
+    } else {
+      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
+      // 所以此处加入 callback 以防止这种情况
+      app.userInfoReadyCallback = res => {
+        console.log("onload, app.globalData is set later");
+        fetchSessions();
+        // this.setData({
+        //   userInfo: res.userInfo,
+        //   hasUserInfo: true
+        // })
+      }
+    }
+    },
   onReady: function () {
-  
-  },
-
-
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide: function () {
-  
-  },
-
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload: function () {
-  
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh: function () {
-  
+    console.log("index.js onReady");
+    if (app.globalData.openid) {
+      console.log("on load, app.globalData is already set");
+      fetchSessions();
+      // this.setData({
+      //   userInfo: app.globalData.userInfo,
+      //   hasUserInfo: true
+      // })
+    } else {
+      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
+      // 所以此处加入 callback 以防止这种情况
+      // app.userInfoReadyCallback = res => {
+      //   console.log("onload, app.globalData is set later");
+      //   fetchSessions();
+      //   // this.setData({
+      //   //   userInfo: res.userInfo,
+      //   //   hasUserInfo: true
+      //   // })
+      // }
+    }
   },
 
   /**
-   * 页面上拉触底事件的处理函数
+   * 生命周期函数--监听页面显示
    */
-  onReachBottom: function () {
-  
+  onShow: function () {
+    console.log("index.js onShow");
+    if (app.globalData.openid) {
+      console.log("on load, app.globalData is already set");
+      fetchSessions();
+      // this.setData({
+      //   userInfo: app.globalData.userInfo,
+      //   hasUserInfo: true
+      // })
+    } else {
+      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
+      // 所以此处加入 callback 以防止这种情况
+      // app.userInfoReadyCallback = res => {
+      //   console.log("onload, app.globalData is set later");
+      //   fetchSessions();
+      //   // this.setData({
+      //   //   userInfo: res.userInfo,
+      //   //   hasUserInfo: true
+      //   // })
+      // }
+    }
   },
 
-  /**
-   * 用户点击右上角分享
-   */
-  onShareAppMessage: function () {
-  
-  },
-
-  /* 用户点击时间 */
+  /* 用户点击事件 */
 
   // 新建投票
   createVoteTapped: function() {

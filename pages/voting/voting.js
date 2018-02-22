@@ -25,15 +25,18 @@ Page({
     { name: 'Lucy', zIndex: 4 }],
   },
   onLoad: function (options) {
-    var session = JSON.parse(options.session)
     _this = this;
 
+    // 从index.js过来的
+    var session = JSON.parse(options.session)
     createDeadlineString(session.deadlineTimeMiliSec)
     this.setData({
       title: session.title,
       voteIDs: session.voteIDs,
       expired: options.expired
     })
+    // 从分享小程序过来，需要获取sessionId，然后通过bmob获取信息
+    
     fetchVotes(function(){
       // if (options.expired) {
         highlightWinningVotes();
