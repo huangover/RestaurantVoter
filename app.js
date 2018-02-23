@@ -15,22 +15,22 @@ App({
   },
   globalData: {
     userInfo: null,
-    openid: null
+    openID: null
   }
 })
 
 /* 登录所需要的方法 */
 function logIn() {
-  // 如果已经有openid，就不要再去request
+  // 如果已经有openID，就不要再去request
   wx.getStorage({
-    key: 'openid',
+    key: 'openID',
     success: function (res) {
-      console.log("Get openid from db success");
-      _this.globalData.openid = res.data;
+      console.log("Get openID from db success");
+      _this.globalData.openID = res.data;
       getAuthSetting();
     },
     fail: function (error) {
-      console.log("Get openid from db fail");
+      console.log("Get openID from db fail");
       wx.login({
         success: res => {
           console.log("wx login success");
@@ -49,15 +49,20 @@ function logIn() {
 function getOpenId(code, success) {
   _Bmob.User.requestOpenId(code, {//获取userData(根据个人的需要，如果需要获取userData的需要在应用密钥中配置你的微信小程序AppId和AppSecret，且在你的项目中要填写你的appId)
     success: function (userData) {
-      console.log("Bmob get openid success");
+      console.log("Bmob get openID success");
+
+      if (_this.getOpenidCallback) {
+        _this.getOpenidCallback(userData.openid);
+      }
+
       wx.setStorage({
-        key: "openid",
+        key: "openID",
         data: userData.openid
       })
-      _this.globalData.openid = userData.openid;
+      _this.globalData.openID = userData.openid;
 
       var user = new User();
-      user.set("openid", userData.openid);
+      user.set("openID", userData.openid);
       user.save(null, {
         success: res=> {
           console.log("Bmob create user success");
@@ -74,21 +79,6 @@ function getOpenId(code, success) {
       console.log("Error: " + error.code + " " + error.message);
     }
   });
-
-  _Bmob.User.requestOpenId(code, {
-    success: function (res) {
-      wx.setStorage({
-        key: "openid",
-        data: res.openid
-      })
-      _this.globalData.openid = res.openid;
-      success();
-    },
-    error: function (error) {
-      // Show the error message somewhere
-      console.log("Fail to get openid with error: " + error.code + " " + error.message);
-    }
-  })
 }
 
 function showAuthFail() {
@@ -132,23 +122,27 @@ function getUserInfo() {
       if (_this.userInfoReadyCallback) {
         _this.userInfoReadyCallback(res)
       } else {
-        console.log("index.js没有实现回调");
+        console.log("index.js没有实现userInfoReadyCallback回调");
       }
 
       //更新/第一次填写用户的信息
       var query = new _Bmob.Query(User);
-      query.get(_this.globalData.openid, {
-        success: res=> {
-          res.set("avatarUrl", userInfo.avatarUrl);
-          res.set("city", userInfo.city);
-          res.set("country", userInfo.country);
-          res.set("gender", userInfo.gender);
-          res.set("province", userInfo.province);
-          res.set("username", userInfo.nickName);
-          res.save();
+      query.equalTo('openid', _this.globalData.openID);
+      query.find({
+        success: results=> {
+          for (var i in results) {
+            var res = results[i];
+            res.set("avatarUrl", userInfo.avatarUrl);
+            res.set("city", userInfo.city);
+            res.set("country", userInfo.country);
+            res.set("gender", userInfo.gender);
+            res.set("province", userInfo.province);
+            res.set("username", userInfo.nickName);
+            res.save();
+          }
         },
         error: function(result, error) {
-          console.log("failed to retrieve User with openid" + _this.globalData.openid);
+          console.log("failed to retrieve User with openID" + _this.globalData.openID);
         }
       });
     },
@@ -179,9 +173,9 @@ function getAuthSetting() {
 
 /*
 
-1、本地是否存有openid：
+1、本地是否存有openID：
   有：去2，是否有授权userinfo
-  无：呼叫login/getOpenId，获取openid
+  无：呼叫login/getopenID，获取openID
     成功：去2，是否有授权userinfo
     失败：处理失败，无法正常继续
 

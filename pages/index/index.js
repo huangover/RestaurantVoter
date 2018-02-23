@@ -14,6 +14,7 @@ Page({
     expiredSessions: null,
     hideExpiredSessionView: true,
     hideValidSessionView: true,
+    openID: null,
     shareData: {
       title: '自定义分享标题',
       desc: '自定义分享描述',
@@ -29,74 +30,25 @@ Page({
    */
   onLoad: function (options) {
     _this = this;
-    if (app.globalData.openid) {
+    if (app.globalData.openID) {
       console.log("on load, app.globalData is already set");
-      fetchSessions();
-      // this.setData({
-      //   userInfo: app.globalData.userInfo,
-      //   hasUserInfo: true
-      // })
+      fetchSessions(app.globalData.openID);
+      this.setData({
+        openID: app.globalData.openID,
+      })
     } else {
       // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
       // 所以此处加入 callback 以防止这种情况
-      app.userInfoReadyCallback = res => {
+
+      app.getOpenIDCallback = res => {
         console.log("onload, app.globalData is set later");
-        fetchSessions();
-        // this.setData({
-        //   userInfo: res.userInfo,
-        //   hasUserInfo: true
-        // })
+        this.setData({
+          openID: res,
+        })
+        fetchSessions(res)
       }
     }
     },
-  onReady: function () {
-    console.log("index.js onReady");
-    if (app.globalData.openid) {
-      console.log("on load, app.globalData is already set");
-      fetchSessions();
-      // this.setData({
-      //   userInfo: app.globalData.userInfo,
-      //   hasUserInfo: true
-      // })
-    } else {
-      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
-      // 所以此处加入 callback 以防止这种情况
-      // app.userInfoReadyCallback = res => {
-      //   console.log("onload, app.globalData is set later");
-      //   fetchSessions();
-      //   // this.setData({
-      //   //   userInfo: res.userInfo,
-      //   //   hasUserInfo: true
-      //   // })
-      // }
-    }
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow: function () {
-    console.log("index.js onShow");
-    if (app.globalData.openid) {
-      console.log("on load, app.globalData is already set");
-      fetchSessions();
-      // this.setData({
-      //   userInfo: app.globalData.userInfo,
-      //   hasUserInfo: true
-      // })
-    } else {
-      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
-      // 所以此处加入 callback 以防止这种情况
-      // app.userInfoReadyCallback = res => {
-      //   console.log("onload, app.globalData is set later");
-      //   fetchSessions();
-      //   // this.setData({
-      //   //   userInfo: res.userInfo,
-      //   //   hasUserInfo: true
-      //   // })
-      // }
-    }
-  },
 
   /* 用户点击事件 */
 
@@ -125,7 +77,7 @@ Page({
   }
 })
 
-function fetchSessions() {
+function fetchSessions(openid) {
 
   var now = new Date();
   var nowDateStr = now.getFullYear().toString() + "-" + now.getMonth().toString() + "-" + now.getDate().toString();
@@ -137,8 +89,9 @@ function fetchSessions() {
     title: '',
   })
   var query = new Bmob.Query(bmob_session);
+  query.contains('openIDs', openid);
   query.find({
-    success: res=> {
+    success: function(res) {
       wx.hideLoading()
       var validSessions = [];
       var expiredSessions = [];
@@ -161,7 +114,8 @@ function fetchSessions() {
     error: res=> {
       wx.hideLoading()
       wx.showToast({
-        title: '获取数据错误，请重试'
+        title: '获取数据错误，请重试',
+        icon: 'none'
       })
     }
   });
