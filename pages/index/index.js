@@ -1,14 +1,14 @@
 const app = getApp();
-var _this;
+
+var Objects = require('../../utils/objects.js');
+
 var Bmob = require('../../utils/bmob.js');
 var _sessionObjectName = 'Session';
 var bmob_session = Bmob.Object.extend(_sessionObjectName);
 
-Page({
+var _this;
 
-  /**
-   * 页面的初始数据
-   */
+Page({
   data: {
     validSessions: null,
     expiredSessions: null,
@@ -41,7 +41,7 @@ Page({
       // 所以此处加入 callback 以防止这种情况
 
       app.getOpenIDCallback = res => {
-        console.log("onload, app.globalData is set later");
+        console.log("onload, app.globalData is set via callback");
         this.setData({
           openID: res,
         })
@@ -85,24 +85,29 @@ function fetchSessions(openid) {
   var nowStr = nowDateStr + " " + nowTimeStr;
   var nowMilSeconds = Date.parse(nowStr);
 
-  wx.showLoading({
-    title: '',
-  })
+  wx.showLoading({ title: '' });
   var query = new Bmob.Query(bmob_session);
-  query.contains('openIDs', openid);
+  // query.contains('openIDs', openid);
   query.find({
     success: function(res) {
       wx.hideLoading()
+      console.log("Fetch sessions success. Result is");
       var validSessions = [];
       var expiredSessions = [];
+
       for(var index in res) {
         var session = res[index];
+        var localSession = new Objects.Session(
+          session.id, 
+          session.attributes.deadlineTimeMiliSec,
+          session.attributes.title,
+          session.attributes.voteIDs)
+
         var date = new Date();
-        
         if (session.attributes.deadlineTimeMiliSec < nowMilSeconds) {
-          expiredSessions.push(session.attributes);
+          expiredSessions.push(localSession);
         } else {
-          validSessions.push(session.attributes);
+          validSessions.push(localSession);
         }
       }
       _this.setData({ 

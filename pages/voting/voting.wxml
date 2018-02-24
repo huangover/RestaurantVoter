@@ -18,7 +18,7 @@
 </view>
 
 <view class='deadLineContainer'>
-  <text class='deadLineView'>截止日期: {{deadline}}</text>
+  <text class='deadLineView'>截止日期: {{session.deadlineString}}</text>
 </view>
 
 <view class='notUniqueContainer'> <!-- hidden='{{expired && hasUniqueWinner}}'>  -->

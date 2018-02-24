@@ -1,17 +1,21 @@
-// TO-DO: 1. 如果已经截止，不允许投票
 const app = getApp()
+
+var Objects = require('../../utils/objects.js');
 var Bmob = require('../../utils/bmob.js');
-var _this;
-var _voteObjectName = 'Vote';
-var bmod_vote = Bmob.Object.extend(_voteObjectName);
-var session;
+
+var bmod_vote = Bmob.Object.extend('Vote');
+var bmod_session = Bmob.Object.extend('Session');
+
 var cellHighlightColor = '#1E90FF';
 var cellDefaultColor = 'white';
+
+var _this;
+
 Page({
   data: {
+    isFromShare: false,
     deadline: null,
-    title: null,
-    voteIDs: null,
+    session: null,
     expired: null,
     votes:null,
     indexOfCellVoted:null,
@@ -23,25 +27,92 @@ Page({
     { name: 'Jax', zIndex: 2 },
     { name: 'Katy', zIndex: 3 },
     { name: 'Lucy', zIndex: 4 }],
+    shareData: {
+      title: '自定义分享标题',
+      desc: '自定义分享描述',
+      path: '/pages/voting/voting'
+    }
   },
   onLoad: function (options) {
-    _this = this;
+    console.log("voting.js onload, and options is ");
+    console.log(options);
 
-    // 从index.js过来的
-    var session = JSON.parse(options.session)
-    createDeadlineString(session.deadlineTimeMiliSec)
-    this.setData({
-      title: session.title,
-      voteIDs: session.voteIDs,
-      expired: options.expired
-    })
-    // 从分享小程序过来，需要获取sessionId，然后通过bmob获取信息
-    
-    fetchVotes(function(){
-      // if (options.expired) {
+    _this = this;
+    _this.setData({ isFromShare: options.sessionID != null });
+
+    if (_this.data.isFromShare) {
+      getOpenID(function (openID)  {
+        
+        console.log("votins.js get openID success, openID is:");
+        console.log(openID);
+        // 从分享小程序过来，需要获取sessionId，然后通过bmob获取session信息，再fetch votes
+        var query = new Bmob.Query(bmod_session);
+        query.get(options.sessionID, {
+          success: res => {
+            console.log("votings.js fetch session with id success");
+            console.log(res);
+
+            //把打开该页面的用户加入到openIDs中
+            var openIDs = null;
+            if (res.attributes.openIDs) {
+              openIDs = res.attributes.openIDs;
+              openIDs.push(openID);//去重还没做
+            } else {
+              openIDs = [openID];
+            }
+            console.log("Session.openIDs is");
+            console.log(openIDs);
+            res.set('openIDs', openIDs);
+            res.save();
+
+            //创建本地的Session对象
+            var localSession = new Objects.Session(
+              res.id,
+              res.attributes.deadlineTimeMiliSec,
+              res.attributes.title,
+              res.attributes.voteIDs)
+            _this.setData({
+              session: localSession,
+              expired: false
+            })
+          },
+          error: error => {
+            console.log("votings.js fetch session with id fail");
+          }
+        });
+      });
+    } else {
+      // 从index.js过来的
+      var session = JSON.parse(options.session)
+      var localSession = new Objects.Session(
+        session.id,
+        session.deadlineTimeMiliSec,
+        session.title,
+        session.voteIDs)
+      console.log("session.voteIDs");  
+      console.log(session.voteIDs);
+      console.log("localsession.voteIDs");
+      console.log(localSession.voteIDs);
+      _this.setData({
+        session: localSession,
+        expired: options.expired
+      })
+
+      fetchVotes(function () {
+        // if (options.expired) {
         highlightWinningVotes();
-      // }
-    });
+        // }
+      });
+    }
+  },
+  onShareAppMessage: function () {
+    // title 要写xxx邀请你投票
+    // return this.data.shareData
+    return {
+      title: '收到一个投票邀请',
+      desc: _this.data.session.title,
+      path: '/pages/voting/voting?sessionID=' + _this.data.session.id,
+    }
   },
   cellTapped: function(res) {
     if (_this.data.expired) {return;}
@@ -52,7 +123,7 @@ Page({
     updateCellBgColorAtIndex(res.currentTarget.dataset.id);
   },
   addButtonTapped: function() {
-    this.setData({ modalHidden: false})
+    _this.setData({ modalHidden: false})
   },
   reVoteButtonTapped: function() {
     // 挑出票数最高的几个，清空票数，并且删除剩下的选项，然后重新加载页面
@@ -67,30 +138,21 @@ Page({
   // }
 })
 
-// 函数
-function createDeadlineString(deadlineTimeMiliSec) {
-  var date = new Date(deadlineTimeMiliSec);
-  console.log(date);
-  console.log((date.getMonth() + 1).toString());
-  var dateString = date.getFullYear().toString()+"-"+(date.getMonth()+1).toString()+"-"+date.getDate().toString() + " " + date.getHours().toString() + ":" + date.getMinutes().toString();
-  _this.setData({ deadline : dateString});
-}
-
 function fetchVotes(success) {
-  if (_this.data.voteIDs == null || _this.data.voteIDs.length == 0) {
+  if (_this.data.session.voteIDs == null || _this.data.session.voteIDs.length == 0) {
     console.log('cannot fetch empty voteIDs')
     return;
   }
 
   var query = new Bmob.Query(bmod_vote);
-  query.containedIn('objectId', _this.data.voteIDs).find({
+  query.containedIn('objectId', _this.data.session.voteIDs).find({
     success: res => {
       var votes = [];
       var colors = [];
       var maxVoteCount = 0;
       
       for(var index in res) {
-        var localVote = new Vote(res[index].attributes.name, res[index].attributes.count, res[index].id);
+        var localVote = new Objects.Vote(res[index].attributes.name, res[index].attributes.count, res[index].id);
         votes.push(localVote);
         colors.push(cellDefaultColor);
         maxVoteCount = Math.max(maxVoteCount, localVote.count)
@@ -165,18 +227,25 @@ function highlightWinningVotes() {
     hasUniqueWinner: (hasUniqueWinner == 1) });
 }
 
-//定义类
-function Vote(_name, _count, _objectId) {
-  var _this = this;
-  _this.count = null;
-  _this.name = null;
-  _this.objectId = null;
-
-  var init = function () {
-    _this.name = _name;
-    _this.count = _count;
-    _this.objectId = _objectId;
-  };
-
-  init();
+function getOpenID(success) {
+  if (app.globalData.openID) {
+    console.log("voting.js on load, app.globalData is already set");
+    _this.setData({ openID: app.globalData.openID });
+    success(app.globalData.openID);
+  } else {
+    app.getOpenIDCallback = res => {
+      console.log("voting.js onload, app.globalData is set via callback");
+      _this.setData({ openID: res });
+      success(res)
+    }
+  }
 }
+
+/* 
+1. 创建：
+要把创建者的openid存在Session的voteIDs和creatorOpenId字段
+
+2. 从index.js过来，有Session的信息，只需要通过voteIDs来fetchVotes
+
+3. 从分享过来，通过options.sessionID获取Session，再进一步通过voteIDs来fetchVotes。同时要把打开该页面的用户的openid加入到Session的openIDs字段（去重）
+*/

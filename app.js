@@ -51,8 +51,10 @@ function getOpenId(code, success) {
     success: function (userData) {
       console.log("Bmob get openID success");
 
-      if (_this.getOpenidCallback) {
-        _this.getOpenidCallback(userData.openid);
+      if (_this.getOpenIDCallback) {
+        _this.getOpenIDCallback(userData.openid);
+      } else {
+        console.log("getOpenIDCallback is not implemented");
       }
 
       wx.setStorage({
