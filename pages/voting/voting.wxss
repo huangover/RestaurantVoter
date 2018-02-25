@@ -57,19 +57,12 @@ Page{
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  background-color: red;
 }
-/* .participantTitleView{
-  font-size: 13px;
-  text-align: center;
-} */
 .participantContainer {
    height: 100%;  
   width: 50rpx;
-  background-color: black;
 }
 .participantImage {
-  background-color: blue;
   width: 50rpx;
   height: 100%;
   border-radius: 24px;

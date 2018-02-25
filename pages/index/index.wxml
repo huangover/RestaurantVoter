@@ -16,7 +16,7 @@
 <!-- 正在投票 -->
 <view class='votesContainer' hidden='{{hideValidSessionView}}'>
   <text class='votingSectionTitle'>正在投票</text>
-  <view class='votesListContainer' wx:for="{{validSessions}}">
+  <view class='votesListContainer' wx:for="{{validSessions}}" wx:key="*this">
     <view class='listCell' bindtap='currentVoteTapped' data-id='{{index}}'>
       <text class='voteName'>{{item.title}}</text>
       <icon type='info' class='detailDisclosureIcon'></icon>
@@ -28,7 +28,7 @@
 
 <view class='votesContainer' hidden='{{hideExpiredSessionView}}' >
   <text class='votingSectionTitle'>往期投票</text>
-  <view class='votesListContainer' wx:for="{{expiredSessions}}">
+  <view class='votesListContainer' wx:for="{{expiredSessions}}" wx:key="*this">
     <view class='listCell' bindtap='pastVoteTapped' data-id='{{index}}'>
       <text class='voteName'>{{item.title}}</text>
       <icon type='info' class='detailDisclosureIcon'></icon>

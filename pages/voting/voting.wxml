@@ -7,11 +7,10 @@
   </view>
 
 <view class='participantContainerView'>
-  <!-- <text class='participantTitleView' >参与者</text>  -->
   <label class='participantWrapper'>
-    <view class='participantContainer'  wx:for="{{participants}}">
+    <view class='participantContainer'  wx:for="{{avatarUrls}}">
     <!-- 怎样用遍历数组设置z-index？？？？ -->
-         <image class='participantImage' style='z-index:{{item.zIndex}}, margin-left:-10px'>{{item.name}}</image> 
+         <image class='participantImage' src='{{item}}' style='z-index:{{item.zIndex}}, margin-left:-10px'></image> 
          <!-- <text>{{index}}</text> -->
     </view>
   </label>

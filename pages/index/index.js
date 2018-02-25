@@ -14,20 +14,8 @@ Page({
     expiredSessions: null,
     hideExpiredSessionView: true,
     hideValidSessionView: true,
-    openID: null,
-    shareData: {
-      title: '自定义分享标题',
-      desc: '自定义分享描述',
-      path: '/pages/index/index'
-    }
+    openID: null
   },
-  onShareAppMessage: function () {
-    return this.data.shareData
-  },
-
-  /**
-   * 生命周期函数--监听页面加载
-   */
   onLoad: function (options) {
     _this = this;
     if (app.globalData.openID) {
@@ -91,7 +79,6 @@ function fetchSessions(openid) {
   query.find({
     success: function(res) {
       wx.hideLoading()
-      console.log("Fetch sessions success. Result is");
       var validSessions = [];
       var expiredSessions = [];
 
@@ -101,8 +88,8 @@ function fetchSessions(openid) {
           session.id, 
           session.attributes.deadlineTimeMiliSec,
           session.attributes.title,
-          session.attributes.voteIDs)
-
+          session.attributes.voteIDs,
+          session.attributes.openIDs)
         var date = new Date();
         if (session.attributes.deadlineTimeMiliSec < nowMilSeconds) {
           expiredSessions.push(localSession);

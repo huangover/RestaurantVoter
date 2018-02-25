@@ -5,6 +5,7 @@ var Bmob = require('../../utils/bmob.js');
 
 var bmod_vote = Bmob.Object.extend('Vote');
 var bmod_session = Bmob.Object.extend('Session');
+var bmod_voter = Bmob.Object.extend('Voter');
 
 var cellHighlightColor = '#1E90FF';
 var cellDefaultColor = 'white';
@@ -17,21 +18,12 @@ Page({
     deadline: null,
     session: null,
     expired: null,
-    votes:null,
-    indexOfCellVoted:null,
-    cellBackgroundColors:null,
+    votes: null,
+    avatarUrls: null,
+    indexOfCellVoted: null,
+    cellBackgroundColors: null,
     maxVoteCount: null,
-    hasUniqueWinner: null,
-    participants: [{ name: 'Tom', zIndex: 0 },
-    { name: 'Jerry', zIndex: 1 },
-    { name: 'Jax', zIndex: 2 },
-    { name: 'Katy', zIndex: 3 },
-    { name: 'Lucy', zIndex: 4 }],
-    shareData: {
-      title: '自定义分享标题',
-      desc: '自定义分享描述',
-      path: '/pages/voting/voting'
-    }
+    hasUniqueWinner: null
   },
   onLoad: function (options) {
     console.log("voting.js onload, and options is ");
@@ -41,40 +33,25 @@ Page({
     _this.setData({ isFromShare: options.sessionID != null });
 
     if (_this.data.isFromShare) {
-      getOpenID(function (openID)  {
-        
-        console.log("votins.js get openID success, openID is:");
-        console.log(openID);
-        // 从分享小程序过来，需要获取sessionId，然后通过bmob获取session信息，再fetch votes
+      // 从分享小程序过来，需要获取sessionId，然后通过bmob获取session信息，再fetch votes
+
+      getOpenID(function (openID) {  
         var query = new Bmob.Query(bmod_session);
         query.get(options.sessionID, {
           success: res => {
-            console.log("votings.js fetch session with id success");
-            console.log(res);
 
             //把打开该页面的用户加入到openIDs中
-            var openIDs = null;
-            if (res.attributes.openIDs) {
-              openIDs = res.attributes.openIDs;
-              openIDs.push(openID);//去重还没做
-            } else {
-              openIDs = [openID];
-            }
-            console.log("Session.openIDs is");
-            console.log(openIDs);
-            res.set('openIDs', openIDs);
+            res.fetchWhenSave(true);
+            res.addUnique('openIDs',openID);
             res.save();
 
-            //创建本地的Session对象
-            var localSession = new Objects.Session(
+            handleInitialSessionData(
               res.id,
               res.attributes.deadlineTimeMiliSec,
               res.attributes.title,
-              res.attributes.voteIDs)
-            _this.setData({
-              session: localSession,
-              expired: false
-            })
+              res.attributes.voteIDs,
+              res.attributes.openIDs,
+              false)
           },
           error: error => {
             console.log("votings.js fetch session with id fail");
@@ -84,59 +61,68 @@ Page({
     } else {
       // 从index.js过来的
       var session = JSON.parse(options.session)
-      var localSession = new Objects.Session(
+      handleInitialSessionData(
         session.id,
         session.deadlineTimeMiliSec,
         session.title,
-        session.voteIDs)
-      console.log("session.voteIDs");  
-      console.log(session.voteIDs);
-      console.log("localsession.voteIDs");
-      console.log(localSession.voteIDs);
-      _this.setData({
-        session: localSession,
-        expired: options.expired
-      })
-
-      fetchVotes(function () {
-        // if (options.expired) {
-        highlightWinningVotes();
-        // }
-      });
+        session.voteIDs,
+        session.openIDs,
+        options.expired)
     }
   },
   onShareAppMessage: function () {
-    // title 要写xxx邀请你投票
-    // return this.data.shareData
     return {
       title: '收到一个投票邀请',
       desc: _this.data.session.title,
       path: '/pages/voting/voting?sessionID=' + _this.data.session.id,
     }
   },
-  cellTapped: function(res) {
-    if (_this.data.expired) {return;}
+  cellTapped: function (res) {
+    if (_this.data.expired) { return; }
     // res.currentTarget.dataset.id是cell的index
     saveVote(
       _this.data.indexOfCellVoted,
       res.currentTarget.dataset.id);
     updateCellBgColorAtIndex(res.currentTarget.dataset.id);
   },
-  addButtonTapped: function() {
-    _this.setData({ modalHidden: false})
+  addButtonTapped: function () {
+    _this.setData({ modalHidden: false })
   },
-  reVoteButtonTapped: function() {
+  reVoteButtonTapped: function () {
     // 挑出票数最高的几个，清空票数，并且删除剩下的选项，然后重新加载页面
   }
-  // getUserInfo: function(e) {
-  //   console.log(e)
-  //   app.globalData.userInfo = e.detail.userInfo
-  //   this.setData({
-  //     userInfo: e.detail.userInfo,
-  //     hasUserInfo: true
-  //   })
-  // }
 })
+
+function handleInitialSessionData(id, deadlineTimeMiliSec, title, voteIDs, openIDs, expired) {
+  var localSession = new Objects.Session(id, deadlineTimeMiliSec, title, voteIDs, openIDs)
+  _this.setData({
+    session: localSession,
+    expired: expired
+  })
+
+  fetchVotes(function () {
+    if (_this.data.expired) {
+      highlightWinningVotes();
+    }
+  });
+
+  loadAvatars(openIDs);
+}
+function loadAvatars(openIDs) {
+  var query = new Bmob.Query(bmod_voter)
+  query.containedIn('openID', openIDs)
+  query.ascending('createdAt')
+  query.find({
+    success: results => {
+      var avatarUrls = results.map(function(res){return res.attributes.avatarUrl})
+      console.log(avatarUrls)
+      _this.setData({ avatarUrls: avatarUrls})
+    },
+    error: error => {
+      console.log("Get voters with openIDs failed")
+    }
+  });
+}
 
 function fetchVotes(success) {
   if (_this.data.session.voteIDs == null || _this.data.session.voteIDs.length == 0) {
@@ -150,17 +136,18 @@ function fetchVotes(success) {
       var votes = [];
       var colors = [];
       var maxVoteCount = 0;
-      
-      for(var index in res) {
+
+      for (var index in res) {
         var localVote = new Objects.Vote(res[index].attributes.name, res[index].attributes.count, res[index].id);
         votes.push(localVote);
         colors.push(cellDefaultColor);
         maxVoteCount = Math.max(maxVoteCount, localVote.count)
       }
-      _this.setData({ votes: votes, cellBackgroundColors: colors, maxVoteCount: maxVoteCount});
+      _this.setData({ votes: votes, cellBackgroundColors: colors, maxVoteCount: maxVoteCount });
       success();
     },
     error: error => {
+      console.log("Fetch votes with error:");
       console.log(error);
     }
   });
@@ -185,7 +172,7 @@ function saveVote(oldIndex, newIndex) {
 }
 
 function updateBmobVote(objectId, isIncrease, success, failure) {
-  
+
   var query = new Bmob.Query(bmod_vote);
   query.get(objectId, {
     success: res => {
@@ -216,15 +203,16 @@ function saveNewVote(newIndex) {
 
 function highlightWinningVotes() {
   var hasUniqueWinner = 0;
-  for(var i in _this.data.votes) {
-      if (_this.data.votes[i].count == _this.data.maxVoteCount) {
-        _this.data.cellBackgroundColors[i] = cellHighlightColor;
-        hasUniqueWinner = hasUniqueWinner + 1;
-      }
+  for (var i in _this.data.votes) {
+    if (_this.data.votes[i].count == _this.data.maxVoteCount) {
+      _this.data.cellBackgroundColors[i] = cellHighlightColor;
+      hasUniqueWinner = hasUniqueWinner + 1;
+    }
   }
-  _this.setData({ 
+  _this.setData({
     cellBackgroundColors: _this.data.cellBackgroundColors,
-    hasUniqueWinner: (hasUniqueWinner == 1) });
+    hasUniqueWinner: (hasUniqueWinner == 1)
+  });
 }
 
 function getOpenID(success) {
