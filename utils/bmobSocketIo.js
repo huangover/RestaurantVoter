@@ -806,6 +806,7 @@
         },
         fail: function (e) {
           console.log("request error");
+          console.log(e);
         }
       });
 

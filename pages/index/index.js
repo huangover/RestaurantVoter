@@ -1,7 +1,7 @@
 const app = getApp();
 
 var Objects = require('../../utils/objects.js');
-
+var Helper = require('../../utils/helper.js');
 var Bmob = require('../../utils/bmob.js');
 var _sessionObjectName = 'Session';
 var bmob_session = Bmob.Object.extend(_sessionObjectName);
@@ -16,7 +16,20 @@ Page({
     hideValidSessionView: true,
     openID: null
   },
+  onShow: function() {
+    wx.getStorage({
+      key: 'indexPageShouldReload',
+      success: function(res) {
+        wx.removeStorage({
+          key: 'indexPageShouldReload',
+          success: function(res) {},
+        })
+        fetchSessions(_this.data.openID)
+      }
+    })
+  },
   onLoad: function (options) {
+    console.log("index.js onLoad")
     _this = this;
     if (app.globalData.openID) {
       console.log("on load, app.globalData is already set");
@@ -52,7 +65,7 @@ Page({
     var session = this.data.validSessions[res.currentTarget.dataset.id];
     
     wx.navigateTo({
-      url: '../voting/voting?session=' + JSON.stringify(session) + '&expired=' + false
+      url: '../voting/voting?session=' + JSON.stringify(session)
     })
   },
 
@@ -60,19 +73,12 @@ Page({
   pastVoteTapped: function (res) { 
     var session = this.data.expiredSessions[res.currentTarget.dataset.id];
     wx.navigateTo({
-      url: '../voting/voting?session=' + JSON.stringify(session) + '&expired=' + true
+      url: '../voting/voting?session=' + JSON.stringify(session)
     })
   }
 })
 
 function fetchSessions(openid) {
-
-  var now = new Date();
-  var nowDateStr = now.getFullYear().toString() + "-" + now.getMonth().toString() + "-" + now.getDate().toString();
-  var nowTimeStr = now.getHours().toString() + ":" + now.getMinutes().toString();
-  var nowStr = nowDateStr + " " + nowTimeStr;
-  var nowMilSeconds = Date.parse(nowStr);
-
   wx.showLoading({ title: '' });
   var query = new Bmob.Query(bmob_session);
   // query.contains('openIDs', openid);
@@ -89,11 +95,16 @@ function fetchSessions(openid) {
           session.attributes.deadlineTimeMiliSec,
           session.attributes.title,
           session.attributes.voteIDs,
-          session.attributes.openIDs)
+          session.attributes.openIDs,
+          session.attributes.creatorOpenID,
+          null)
         var date = new Date();
-        if (session.attributes.deadlineTimeMiliSec < nowMilSeconds) {
+
+        if (Helper.isSessionExpired(session.attributes.deadlineTimeMiliSec)) {
+          localSession.expired = true
           expiredSessions.push(localSession);
         } else {
+          localSession.expired = false
           validSessions.push(localSession);
         }
       }

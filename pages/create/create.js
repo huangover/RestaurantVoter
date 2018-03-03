@@ -1,4 +1,4 @@
-// pages/create/create.js
+const app = getApp()
 
 var Bmob = require('../../utils/bmob.js');
 var _this;
@@ -168,6 +168,8 @@ function saveAll() {
       newSession.set('description', _this.data.description);
       newSession.set('deadlineTimeMiliSec', deadlineMilSeconds);
       newSession.set('voteIDs', voteIDs);
+      newSession.set('creatorOpenID', app.globalData.openID);
+      newSession.addUnique('openIDs', app.globalData.openID);
       newSession.save(null, {
         success: res => {
         wx.hideLoading()
@@ -175,6 +177,10 @@ function saveAll() {
             title: '创建成功',
             icon: 'success',
             complete: res=> {
+              wx.setStorage({
+                key: 'indexPageShouldReload',
+                data: true,
+              })
               setTimeout(function () {
                 wx.navigateBack({})
               }, 1200)

@@ -13,26 +13,35 @@ function Vote(_name, _count, _objectId) {
   init();
 }
 
-function Session(id, deadlineTimeMiliSec, title, voteIDs, openIDs) {
+function Session(objectId, deadlineTimeMiliSec, title, voteIDs, openIDs, creatorOpenID, expired) {
   var _this = this;
-  _this.id = null;
+  _this.objectId = null;
   _this.deadlineTimeMiliSec = null;
   _this.title = null;
   _this.voteIDs = null;
   _this.deadlineString = null;
   _this.openIDs = null;
+  _this.creatorOpenID = null;
+  _this.expired = null;
 
   var init = function () {
-    _this.id = id;
+    _this.objectId = objectId;
     _this.deadlineTimeMiliSec = deadlineTimeMiliSec;
     _this.title = title;
     _this.voteIDs = voteIDs;
     _this.openIDs = openIDs;
+    _this.creatorOpenID = creatorOpenID;
+    _this.expired = expired;
 
     // deadline string
-    var date = new Date(deadlineTimeMiliSec);
-    var dateString = date.getFullYear().toString() + "-" + (date.getMonth() + 1).toString() + "-" + date.getDate().toString() + " " + date.getHours().toString() + ":" + date.getMinutes().toString();
-    _this.deadlineString = dateString;
+    var now = new Date()
+    if (deadlineTimeMiliSec < now.getTime()) {
+      _this.deadlineString = "已截止"
+    } else {
+      var date = new Date(deadlineTimeMiliSec);
+      var dateString = date.getFullYear().toString() + "-" + (date.getMonth() + 1).toString() + "-" + date.getDate().toString() + " " + date.getHours().toString() + ":" + date.getMinutes().toString();
+      _this.deadlineString = dateString;
+    }
   }
 
   init();

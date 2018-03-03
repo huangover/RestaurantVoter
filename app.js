@@ -2,22 +2,60 @@ var _this;
 var _Bmob;
 var Bmob_User_Name = "Voter";
 var User;
+// var BmobSocketIo;
 
 App({  
   onLaunch: function () {
 
-    var Bmob = require('utils/bmob.js');
-    Bmob.initialize("f26e061cda423a4fb1d09e177364b89b", "0558112a3cc77cae01374a324564e1c6");
-    _Bmob = Bmob;
-    User = Bmob.Object.extend(Bmob_User_Name);
+    initBmobDataService()
+    initWebSocket()
     _this = this;
     logIn();
+    
   },
   globalData: {
     userInfo: null,
     openID: null
   }
 })
+
+function initBmobDataService() {
+  var Bmob = require('utils/bmob.js');
+  Bmob.initialize("f26e061cda423a4fb1d09e177364b89b", "0558112a3cc77cae01374a324564e1c6")
+  _Bmob = Bmob;
+  User = Bmob.Object.extend(Bmob_User_Name);
+}
+
+function initWebSocket() {
+  var BmobSocketIo = require('utils/bmobSocketIo.js').BmobSocketIo;
+  BmobSocketIo.initialize("f26e061cda423a4fb1d09e177364b89b")
+  BmobSocketIo.init()
+  BmobSocketIo.onInitListen = function () {
+    BmobSocketIo.updateTable("Vote")
+    BmobSocketIo.updateTable("Session")
+  }
+  BmobSocketIo.onUpdateTable = function (tablename, data) {
+    console.log("BmobSocket update:")
+    console.log("tablename is: ")
+    console.log(tablename)
+    console.log("data is")
+    console.log(data)
+    if (tablename == 'Vote') {
+      if (_this.voteUpdateCallback) {
+        _this.voteUpdateCallback(data)
+      } else {
+        console.log("Vote object updated on backend, but voteUpdateCallback callback not implemented")
+      }
+    }
+    if (tablename == 'Session') {
+      if (_this.sessionUpdateCallback) {
+        _this.sessionUpdateCallback(data)
+      } else {
+        console.log("Session object updated on backend, but voteUpdateCallback callback not implemented")
+      }
+    }
+  };
+}
 
 /* 登录所需要的方法 */
 function logIn() {
@@ -27,6 +65,11 @@ function logIn() {
     success: function (res) {
       console.log("Get openID from db success");
       _this.globalData.openID = res.data;
+      if (_this.getOpenIDCallback) {
+        _this.getOpenIDCallback(res.data);
+      } else {
+        console.log("getOpenIDCallback is not implemented");
+      }
       getAuthSetting();
     },
     fail: function (error) {
@@ -129,7 +172,7 @@ function getUserInfo() {
 
       //更新/第一次填写用户的信息
       var query = new _Bmob.Query(User);
-      query.equalTo('openid', _this.globalData.openID);
+      query.equalTo('openID', _this.globalData.openID);
       query.find({
         success: results=> {
           for (var i in results) {
