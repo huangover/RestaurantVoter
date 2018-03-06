@@ -2,16 +2,23 @@ var _this;
 var _Bmob;
 var Bmob_User_Name = "Voter";
 var User;
-// var BmobSocketIo;
+const bmobSocketIo = require('utils/bmobSocketIo.js')
+var _socketIo
 
-App({  
+
+App({ 
+  onShow: function() {
+    // initWebSocket() //SDK还没有支持disconnect socket，支持了以后uncomment这里
+    logIn()
+  },
+  onHide: function() {
+    // disconnectSocket() //SDK还没有支持disconnect socket，支持了以后uncomment这里
+  },
   onLaunch: function () {
-
     initBmobDataService()
-    initWebSocket()
-    _this = this;
-    logIn();
-    
+    _this = this
+    _socketIo = new bmobSocketIo('f26e061cda423a4fb1d09e177364b89b');
+    initWebSocket() //SDK还没有支持disconnect socket，支持了以后comment这里
   },
   globalData: {
     userInfo: null,
@@ -26,20 +33,22 @@ function initBmobDataService() {
   User = Bmob.Object.extend(Bmob_User_Name);
 }
 
+function disconnectSocket() {
+  _socketIo.unsubUpdateTable('Vote')
+  _socketIo.unsubUpdateTable('Session')
+  // _socketIo.obj.socket.disconnect()
+  _socketIo = null
+}
+
 function initWebSocket() {
-  var BmobSocketIo = require('utils/bmobSocketIo.js').BmobSocketIo;
-  BmobSocketIo.initialize("f26e061cda423a4fb1d09e177364b89b")
-  BmobSocketIo.init()
-  BmobSocketIo.onInitListen = function () {
-    BmobSocketIo.updateTable("Vote")
-    BmobSocketIo.updateTable("Session")
+  _socketIo.initialize()
+  _socketIo.onInitListen = function () {
+    _socketIo.updateTable("Vote")
+    _socketIo.updateTable("Session")
   }
-  BmobSocketIo.onUpdateTable = function (tablename, data) {
+  _socketIo.onUpdateTable = function (tablename, data) {
     console.log("BmobSocket update:")
-    console.log("tablename is: ")
-    console.log(tablename)
-    console.log("data is")
-    console.log(data)
+    console.log("tablename is: " + tablename + " data is " + data)
     if (tablename == 'Vote') {
       if (_this.voteUpdateCallback) {
         _this.voteUpdateCallback(data)
@@ -51,7 +60,7 @@ function initWebSocket() {
       if (_this.sessionUpdateCallback) {
         _this.sessionUpdateCallback(data)
       } else {
-        console.log("Session object updated on backend, but voteUpdateCallback callback not implemented")
+        console.log("Session object updated on backend, but sessionUpdateCallback callback not implemented")
       }
     }
   };
@@ -64,12 +73,7 @@ function logIn() {
     key: 'openID',
     success: function (res) {
       console.log("Get openID from db success");
-      _this.globalData.openID = res.data;
-      if (_this.getOpenIDCallback) {
-        _this.getOpenIDCallback(res.data);
-      } else {
-        console.log("getOpenIDCallback is not implemented");
-      }
+      // _this.globalData.openID = res.data;
       getAuthSetting();
     },
     fail: function (error) {
@@ -93,19 +97,11 @@ function getOpenId(code, success) {
   _Bmob.User.requestOpenId(code, {//获取userData(根据个人的需要，如果需要获取userData的需要在应用密钥中配置你的微信小程序AppId和AppSecret，且在你的项目中要填写你的appId)
     success: function (userData) {
       console.log("Bmob get openID success");
-
-      if (_this.getOpenIDCallback) {
-        _this.getOpenIDCallback(userData.openid);
-      } else {
-        console.log("getOpenIDCallback is not implemented");
-      }
-
       wx.setStorage({
         key: "openID",
         data: userData.openid
       })
-      _this.globalData.openID = userData.openid;
-
+      
       var user = new User();
       user.set("openID", userData.openid);
       user.save(null, {
@@ -127,16 +123,18 @@ function getOpenId(code, success) {
 }
 
 function showAuthFail() {
-  wx.showToast({
-    title: '授权失败，无法使用小程序',
-    icon: 'none'
+  wx.showModal({
+    title: '',
+    content: '授权失败，无法使用小程序',
+    showCancel: false
   })
 }
 
 function showLoginFail() {
-  wx.showToast({
-    title: '登陆失败，请重试',
-    icon: 'none'
+  wx.showModal({
+    title: '',
+    content: '登陆失败，请重试',
+    showCancel: false
   })
 }
 
@@ -161,35 +159,40 @@ function getUserInfo() {
       var userInfo = res.userInfo;
       _this.globalData.userInfo = userInfo;
 
-      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
-      // 所以此处加入 callback 以防止这种情况
-      // index.js实现了userInfoReadyCallback
-      if (_this.userInfoReadyCallback) {
-        _this.userInfoReadyCallback(res)
-      } else {
-        console.log("index.js没有实现userInfoReadyCallback回调");
-      }
+      // 统一在这里给_this.globalData.openID赋值，照顾授权失败的情况
+      wx.getStorage({
+        key: 'openID',
+        success: function (res) {
+          var openID = res.data
 
-      //更新/第一次填写用户的信息
-      var query = new _Bmob.Query(User);
-      query.equalTo('openID', _this.globalData.openID);
-      query.find({
-        success: results=> {
-          for (var i in results) {
-            var res = results[i];
-            res.set("avatarUrl", userInfo.avatarUrl);
-            res.set("city", userInfo.city);
-            res.set("country", userInfo.country);
-            res.set("gender", userInfo.gender);
-            res.set("province", userInfo.province);
-            res.set("username", userInfo.nickName);
-            res.save();
+          _this.globalData.openID = openID//当index.js的onLoad比这句话执行晚的时候
+          if (_this.logInCompleteCallback) {
+            _this.logInCompleteCallback(openID)//当index.js的onLoad比这句话执行早的时候
           }
-        },
-        error: function(result, error) {
-          console.log("failed to retrieve User with openID" + _this.globalData.openID);
+
+          //更新/第一次填写用户的信息
+          var query = new _Bmob.Query(User);
+          query.equalTo('openID', openID);
+          query.find({
+            success: results => {
+              for (var i in results) {
+                var res = results[i];
+                res.set("avatarUrl", userInfo.avatarUrl);
+                res.set("city", userInfo.city);
+                res.set("country", userInfo.country);
+                res.set("gender", userInfo.gender);
+                res.set("province", userInfo.province);
+                res.set("username", userInfo.nickName);
+                res.save();
+              }
+            },
+            error: function (result, error) {
+              console.log("failed to retrieve User with openID" + _this.globalData.openID);
+            }
+          })
+
         }
-      });
+      })
     },
     fail: res => {
       showAuthFail()

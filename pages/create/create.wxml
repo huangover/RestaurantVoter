@@ -27,7 +27,6 @@
 </view>
 
 <button class='finishButton' type='primary' bindtap='finishButtonTapped'>完成</button>
-
 </scroll-view> 
 
 <!-- 输入新选线的提示框 -->

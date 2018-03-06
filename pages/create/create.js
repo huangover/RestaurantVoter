@@ -1,6 +1,7 @@
 const app = getApp()
 
 var Bmob = require('../../utils/bmob.js');
+var Helper = require('../../utils/helper.js');
 var _this;
 var _voteObjectName = 'Vote';
 var _sessionObjectName = 'Session';
@@ -16,7 +17,7 @@ Page({
     deadlineTime: "",
     newVoteValue: "",
     sessionTitle: "",
-    sessionDescription: "",
+    sessionDescription: ""
   },
   onLoad: function (options) {
     _this = this;
@@ -93,10 +94,12 @@ Page({
 
 function checkValidTitle() { 
   if (_this.data.sessionTitle == "") {
-    wx.showToast({
-      title: '请输入标题',
-      icon: 'none'
-    });
+    wx.showModal({
+      title: '',
+      content: '请输入标题',
+      showCancel: false
+    })
+  
     return false;
   }
 
@@ -105,11 +108,12 @@ function checkValidTitle() {
 
 function checkValidItems() {
   if (_this.data.votes.length == 0) {
-    wx.showToast({
-      title: '请添加至少一个选项',
-      icon: 'none'
+    wx.showModal({
+      title: '',
+      content: '请添加至少一个选项',
+      showCancel: false
     })
-
+    
     return false;
   }
 
@@ -117,20 +121,14 @@ function checkValidItems() {
 }
 
 function checkValidDeadline() {
-  var timeStr = _this.data.deadlineDate + " " + _this.data.deadlineTime;
-  var deadlineMilSeconds = Date.parse(timeStr);
+  var deadlineDate = Helper.createUTCDate(_this.data.deadlineDate, _this.data.deadlineTime)
 
-  var now = new Date();
-  var nowDateStr = now.getFullYear().toString() + "-" + now.getMonth().toString() + "-" + now.getDate().toString();
-  var nowTimeStr = now.getHours().toString() + ":" + now.getMinutes().toString();
-  var nowStr = nowDateStr + " " + nowTimeStr;
-  var nowMilSeconds = Date.parse(nowStr);
-
-  if (deadlineMilSeconds < nowMilSeconds) {
-    wx.showToast({
-      title: '截止日期时间不能小于当前的日期时间',
-      icon: 'none'
-    });
+  if (deadlineDate < new Date()) {
+    wx.showModal({
+      title: '',
+      content: '截止日期时间不能小于当前的日期时间',
+      showCancel: false
+    })
 
     return false;
   }
@@ -159,14 +157,11 @@ function saveAll() {
         voteIDs.push(objects[index].id);
       }
 
-      var timeStr = _this.data.deadlineDate + " " + _this.data.deadlineTime;
-      var deadlineMilSeconds = Date.parse(timeStr);
-
       //创建session
       var newSession = new bmod_session()
       newSession.set('title', _this.data.sessionTitle);
       newSession.set('description', _this.data.description);
-      newSession.set('deadlineTimeMiliSec', deadlineMilSeconds);
+      newSession.set('deadlineString', Helper.createUTCDate(_this.data.deadlineDate, _this.data.deadlineTime).toISOString())
       newSession.set('voteIDs', voteIDs);
       newSession.set('creatorOpenID', app.globalData.openID);
       newSession.addUnique('openIDs', app.globalData.openID);
@@ -189,9 +184,10 @@ function saveAll() {
         },
         error: function (newSession, error) {
           wx.hideLoading()
-          wx.showToast({
-            title: '创建失败, 请重试',
-            icon: 'none'
+          wx.showModal({
+            title: '',
+            content: '创建失败，请重试',
+            showCancel: false
           })
         }
       });

@@ -1,12 +1,13 @@
-const app = getApp();
+const app = getApp()
 
-var Objects = require('../../utils/objects.js');
-var Helper = require('../../utils/helper.js');
-var Bmob = require('../../utils/bmob.js');
-var _sessionObjectName = 'Session';
-var bmob_session = Bmob.Object.extend(_sessionObjectName);
+var Objects = require('../../utils/objects.js')
+var Helper = require('../../utils/helper.js')
+var Bmob = require('../../utils/bmob.js')
+var _sessionObjectName = 'Session'
+var bmob_session = Bmob.Object.extend(_sessionObjectName)
 
-var _this;
+var _logInCompleteCallback
+var _this
 
 Page({
   data: {
@@ -30,26 +31,22 @@ Page({
   },
   onLoad: function (options) {
     console.log("index.js onLoad")
-    _this = this;
-    if (app.globalData.openID) {
-      console.log("on load, app.globalData is already set");
-      fetchSessions(app.globalData.openID);
-      this.setData({
-        openID: app.globalData.openID,
-      })
-    } else {
-      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
-      // 所以此处加入 callback 以防止这种情况
+    _this = this
 
-      app.getOpenIDCallback = res => {
-        console.log("onload, app.globalData is set via callback");
-        this.setData({
-          openID: res,
-        })
+    if (app.globalData.openID) {
+      console.log("index.js 从app.globalData获取openID")
+      _this.setData({ openID: app.globalData.openID })
+      fetchSessions(app.globalData.openID)
+    } else {
+      _logInCompleteCallback = res => {
+        console.log("index.js _logInCompleteCallback 呼叫，开始fetchSessions with openID: ")
+        console.log(res)
+        _this.setData({ openID: res })
         fetchSessions(res)
       }
+      app.logInCompleteCallback = _logInCompleteCallback
     }
-    },
+  },
 
   /* 用户点击事件 */
 
@@ -62,7 +59,7 @@ Page({
 
   // 点击 正在投票
   currentVoteTapped: function(res) {
-    var session = this.data.validSessions[res.currentTarget.dataset.id];
+    var session = this.data.validSessions[res.currentTarget.dataset.id]
     
     wx.navigateTo({
       url: '../voting/voting?session=' + JSON.stringify(session)
@@ -71,7 +68,7 @@ Page({
 
   // 点击 往期投票
   pastVoteTapped: function (res) { 
-    var session = this.data.expiredSessions[res.currentTarget.dataset.id];
+    var session = this.data.expiredSessions[res.currentTarget.dataset.id]
     wx.navigateTo({
       url: '../voting/voting?session=' + JSON.stringify(session)
     })
@@ -79,47 +76,48 @@ Page({
 })
 
 function fetchSessions(openid) {
-  wx.showLoading({ title: '' });
-  var query = new Bmob.Query(bmob_session);
-  // query.contains('openIDs', openid);
+  wx.showLoading({ title: '' })
+  var query = new Bmob.Query(bmob_session)
+  query.containedIn('openIDs', [openid])
   query.find({
     success: function(res) {
       wx.hideLoading()
-      var validSessions = [];
-      var expiredSessions = [];
-
+      var validSessions = []
+      var expiredSessions = []
+      
       for(var index in res) {
-        var session = res[index];
+        var session = res[index]
         var localSession = new Objects.Session(
           session.id, 
-          session.attributes.deadlineTimeMiliSec,
+          session.attributes.deadlineString,
           session.attributes.title,
           session.attributes.voteIDs,
           session.attributes.openIDs,
           session.attributes.creatorOpenID,
           null)
-        var date = new Date();
+        var date = new Date()
 
-        if (Helper.isSessionExpired(session.attributes.deadlineTimeMiliSec)) {
+        if (Helper.isSessionExpired(session.attributes.deadlineString)) {
           localSession.expired = true
-          expiredSessions.push(localSession);
+          expiredSessions.push(localSession)
         } else {
           localSession.expired = false
-          validSessions.push(localSession);
+          validSessions.push(localSession)
         }
       }
       _this.setData({ 
         validSessions: validSessions, 
         expiredSessions: expiredSessions, 
         hideExpiredSessionView: expiredSessions.length == 0, 
-        hideValidSessionView: validSessions.length == 0});
+        hideValidSessionView: validSessions.length == 0})
     },
     error: res=> {
       wx.hideLoading()
-      wx.showToast({
-        title: '获取数据错误，请重试',
-        icon: 'none'
+      wx.showModal({
+        title: '',
+        content: '获取数据错误，请重试',
+        showCancel: false
       })
     }
-  });
+  })
 }

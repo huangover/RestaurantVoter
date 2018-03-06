@@ -5,11 +5,15 @@ var Bmob = require('../../utils/bmob.js')
 var bmod_vote = Bmob.Object.extend('Vote')
 var bmod_session = Bmob.Object.extend('Session')
 var bmod_voter = Bmob.Object.extend('Voter')
-var BmobSocketIo = require('../../utils/bmobSocketIo.js').BmobSocketIo;
+var BmobSocketIo = require('../../utils/bmobSocketIo.js').BmobSocketIo
+var Helper = require('../../utils/helper.js')
 var cellHighlightColor = '#1E90FF'
 var cellDefaultColor = 'white'
 
 var _this
+var voteUpdateCallback
+var sessionUpdateCallback
+var _logInCompleteCallback
 
 Page({
   data: {
@@ -28,25 +32,6 @@ Page({
     _this = this
     _this.setData({ isFromShare: options.sessionID != null })
 
-    // Vote web socket callback
-    app.voteUpdateCallback = res => {
-      for (var i in _this.data.votes) {
-        var vote = _this.data.votes[i]
-        if (vote.objectId == res.objectId) {
-          vote.count = res.count
-        }
-      }
-      _this.setData({votes: _this.data.votes})
-    }
-
-    // Session web socket callback
-    app.sessionUpdateCallback = res => {
-      if (res.objectId == _this.data.session.objectId) {
-        _this.data.session.expired = Helper.isSessionExpired(res.deadlineTimeMiliSec)
-        _this.setData({ session: _this.data.session})
-      }
-    }
-
     if (_this.data.isFromShare) {
       // 从分享小程序过来，需要获取sessionId，然后通过bmob获取session信息，再fetch votes
 
@@ -58,15 +43,15 @@ Page({
             res.fetchWhenSave(true)
             res.addUnique('openIDs', openID)
             res.save()
-
+            
             handleInitialSessionData(
               res.objectId,
-              res.attributes.deadlineTimeMiliSec,
+              res.attributes.deadlineString,
               res.attributes.title,
               res.attributes.voteIDs,
               res.attributes.openIDs,
-              res.attributes.creatorOpenID,
-              Helper.isSessionExpired(res.attriutes.deadlineTimeMiliSec))
+              res.attributes.openIDs.includes(openID),
+              Helper.isSessionExpired(res.attriutes.deadlineString))
           },
           error: error => {
             console.log("votings.js fetch session with id fail")
@@ -78,13 +63,40 @@ Page({
       var session = JSON.parse(options.session)
       handleInitialSessionData(
         session.objectId,
-        session.deadlineTimeMiliSec,
+        session.deadlineString,
         session.title,
         session.voteIDs,
         session.openIDs,
-        session.creatorOpenID,
+        session.openIDs.includes(app.globalData.openID),
         session.expired)
     }
+  },
+  onShow: function() {
+    // Vote web socket callback
+    voteUpdateCallback = res => {
+      for (var i in _this.data.votes) {
+        var vote = _this.data.votes[i]
+        if (vote.objectId == res.objectId) {
+          vote.count = res.count
+        }
+      }
+      _this.setData({ votes: _this.data.votes })
+    }
+    app.voteUpdateCallback = voteUpdateCallback
+
+    // Session web socket callback
+    sessionUpdateCallback = res => {
+      if (res.objectId == _this.data.session.objectId) {
+        var isExpired = Helper.isSessionExpired(res.deadlineString)
+        _this.data.session.expired = isExpired
+        _this.setData({ session: _this.data.session })
+      }
+    }
+    app.sessionUpdateCallback = sessionUpdateCallback
+  },
+  onHide: function() {
+    voteUpdateCallback = null
+    sessionUpdateCallback = null
   },
   onShareAppMessage: function () {
     return {
@@ -118,28 +130,32 @@ Page({
     var query = new Bmob.Query(bmod_session)
     query.get(_this.data.session.objectId, {
       success: res => {
-        var now = new Date();
-        var nowMilSeconds = now.getTime()
-        res.set('deadlineTimeMiliSec', nowMilSeconds)
+        res.set('deadlineString', new Date().toISOString())
         res.save()
 
         _this.data.session.expired = true
-        _this.setData({ session: _this.data.session.expired})
+        _this.setData({ session: _this.data.session})
+
+        //这样子被过期的session可以reload从而正常显示
+        wx.setStorage({
+          key: 'indexPageShouldReload',
+          data: true,
+        })
       },
       error: function(result, error) {}
-    });
+    })
   }
 })
 
-function handleInitialSessionData(id, deadlineTimeMiliSec, title, voteIDs, openIDs, creatorOpenID, expired) {
-  var localSession = new Objects.Session(id, deadlineTimeMiliSec, title, voteIDs, openIDs)
+function handleInitialSessionData(id, deadlineString, title, voteIDs, openIDs, isSessionCreator, expired) {
+  var localSession = new Objects.Session(id, deadlineString, title, voteIDs, openIDs)
   localSession.expired = expired
   _this.setData({
     session: localSession
   })
 
   // 是否session的创建者，决定是否显示结束投票按键
-  _this.setData({ isSessionCreator: openIDs.includes(creatorOpenID) })
+  _this.setData({ isSessionCreator: isSessionCreator })
 
   fetchVotes(function () {
 
@@ -248,9 +264,10 @@ function updateBmobVote(objectId, isIncrease, success, failure) {
       }
     },
     error: error => {
-      wx.showToast({
-        title: '保存失败，请重试',
-        icon: 'none'
+      wx.showModal({
+        title: '',
+        content: '保存失败，请重试',
+        showCancel: false
       })
       updateCellBgColorAtIndex(-1)//传-1进去，所有cell背景色恢复白色
       _this.setData({ indexOfCellVoted: null })
@@ -281,16 +298,19 @@ function highlightWinningVotes() {
 }
 
 function getOpenID(success) {
+  
   if (app.globalData.openID) {
     console.log("voting.js on load, app.globalData is already set")
     _this.setData({ openID: app.globalData.openID })
     success(app.globalData.openID)
   } else {
-    app.getOpenIDCallback = res => {
-      console.log("voting.js onload, app.globalData is set via callback")
+    _logInCompleteCallback = res => {
+      console.log("voting.js _logInCompleteCallback 呼叫，开始fetchSessions with openID: ")
+      console.log(res)
       _this.setData({ openID: res })
       success(res)
     }
+    app.logInCompleteCallback = _logInCompleteCallback
   }
 }
 /* 

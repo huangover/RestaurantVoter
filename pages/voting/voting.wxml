@@ -47,7 +47,7 @@ module.exports.getRankString = getRankString;
 </view>
 
 <view class='deadLineContainer'>
-  <text class='deadLineView'>截止日期: {{session.deadlineString}}</text>
+  <text class='deadLineView'>截止日期: {{session.deadlineStringToDisplay}}</text>
 </view>
 <!-- hidden='{{!session.expired || (session.expired && hasUniqueWinner)}}'> -->
 <view class='reVoteContainer' hidden='true'>
