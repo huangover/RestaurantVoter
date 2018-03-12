@@ -34,14 +34,17 @@ Page({
 
     if (_this.data.isFromShare) {
       // 从分享小程序过来，需要获取sessionId，然后通过bmob获取session信息，再fetch votes
-
+      console.log("open 小程序 from share, and options is")
+      console.log(options)
       getOpenID(function (openID) {
         var query = new Bmob.Query(bmod_session)
         query.get(options.sessionID, {
           success: res => {
             //把打开该页面的用户加入到openIDs中
             res.fetchWhenSave(true)
-            res.addUnique('openIDs', openID)
+            if (!res.attributes.openIDs.includes(openID)) {
+              res.addUnique('openIDs', openID)
+            }
             res.save()
             
             handleInitialSessionData(
@@ -51,7 +54,7 @@ Page({
               res.attributes.voteIDs,
               res.attributes.openIDs,
               res.attributes.openIDs.includes(openID),
-              Helper.isSessionExpired(res.attriutes.deadlineString))
+              Helper.isSessionExpired(res.attributes.deadlineString))
           },
           error: error => {
             console.log("votings.js fetch session with id fail")

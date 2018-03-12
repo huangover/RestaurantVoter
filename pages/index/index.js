@@ -87,6 +87,7 @@ function fetchSessions(openid) {
       
       for(var index in res) {
         var session = res[index]
+        //Session(objectId, deadlineString, title, voteIDs, openIDs, creatorOpenID, expired)
         var localSession = new Objects.Session(
           session.id, 
           session.attributes.deadlineString,
@@ -94,7 +95,7 @@ function fetchSessions(openid) {
           session.attributes.voteIDs,
           session.attributes.openIDs,
           session.attributes.creatorOpenID,
-          null)
+          Helper.isSessionExpired(session.attributes.deadlineString))
         var date = new Date()
 
         if (Helper.isSessionExpired(session.attributes.deadlineString)) {

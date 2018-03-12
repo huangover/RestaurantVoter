@@ -38,7 +38,7 @@ module.exports.getRankString = getRankString;
 
 <view class='participantContainerView'>
   <label class='participantWrapper'>
-    <view class='participantContainer'  wx:for="{{avatarUrls}}" wx:key="*this">
+    <view class='participantContainer'  wx:for="{{avatarUrls}}" >
     <!-- 怎样用遍历数组设置z-index？？？？ -->
          <image class='participantImage' src='{{item}}' style='z-index:{{item.zIndex}}, margin-left:-10px'></image> 
          <!-- <text>{{index}}</text> -->

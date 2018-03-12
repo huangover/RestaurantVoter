@@ -8,7 +8,6 @@ function isSessionExpired(deadlineString) {
     now.getDate(), 
     now.getHours(), 
     now.getMinutes())
-
   return deadline.getTime() < nowUTC 
 }
 
