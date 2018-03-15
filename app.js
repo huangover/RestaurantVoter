@@ -1,7 +1,7 @@
 var _this;
 var _Bmob;
-var Bmob_User_Name = "Voter";
-var User;
+var Bmob_Voter_Name = "Voter";
+var Voter;
 const bmobSocketIo = require('utils/bmobSocketIo.js')
 var _socketIo
 
@@ -30,7 +30,7 @@ function initBmobDataService() {
   var Bmob = require('utils/bmob.js');
   Bmob.initialize("f26e061cda423a4fb1d09e177364b89b", "0558112a3cc77cae01374a324564e1c6")
   _Bmob = Bmob;
-  User = Bmob.Object.extend(Bmob_User_Name);
+  Voter = Bmob.Object.extend(Bmob_Voter_Name);
 }
 
 function disconnectSocket() {
@@ -102,18 +102,31 @@ function getOpenId(code, success) {
         data: userData.openid
       })
       
-      var user = new User();
-      user.set("openID", userData.openid);
-      user.save(null, {
-        success: res=> {
-          console.log("Bmob create user success");
-          success();
+      // 找是否已经创建过这个voter
+      var query = new Bmob.Query(Voter)
+      query.equalTo('openID', userData.openid)
+      query.find({
+        success: results => {
+          console.log("This voter already exists on Bmob")
+          success()
         },
-        error: function(result, error) {
-          console.log("Fail to create User object with error");
-          console.log(error);
+        error: error => {
+          console.log("This voter is new, create Voter object on Bmob")
+
+          var voter = new Voter()
+          voter.set("openID", userData.openid)
+          voter.save(null, {
+            success: res => {
+              console.log("Bmob create user success")
+              success()
+            },
+            error: function (result, error) {
+              console.log("Fail to create User object with error")
+              console.log(error)
+            }
+          });
         }
-      });
+      })
     },
     error: function (error) {
       // Show the error message somewhere
@@ -171,7 +184,7 @@ function getUserInfo() {
           }
 
           //更新/第一次填写用户的信息
-          var query = new _Bmob.Query(User);
+          var query = new _Bmob.Query(Voter);
           query.equalTo('openID', openID);
           query.find({
             success: results => {

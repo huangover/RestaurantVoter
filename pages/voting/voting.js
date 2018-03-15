@@ -40,20 +40,30 @@ Page({
         var query = new Bmob.Query(bmod_session)
         query.get(options.sessionID, {
           success: res => {
-            //把打开该页面的用户加入到openIDs中
-            res.fetchWhenSave(true)
             if (!res.attributes.openIDs.includes(openID)) {
+              console.log("用户打开share页面，获取session的是")
+              console.log(res)
+              console.log("该用户没有加入session，现在加入")
+              //把打开该页面的用户加入到openIDs中
+              res.fetchWhenSave(true)
               res.addUnique('openIDs', openID)
+              res.save()
             }
-            res.save()
-            
+            console.log("session.openIDs 是")
+            console.log(res.attributes.openIDs)
+            console.log("session.creatorOpenID 是")
+            console.log(res.attributes.creatorOpenID)
+            console.log("用户的openID是")
+            console.log(openID)
+            console.log("res是")
+            console.log(res)
             handleInitialSessionData(
-              res.objectId,
+              res.id,
               res.attributes.deadlineString,
               res.attributes.title,
               res.attributes.voteIDs,
               res.attributes.openIDs,
-              res.attributes.openIDs.includes(openID),
+              res.attributes.creatorOpenID == openID,
               Helper.isSessionExpired(res.attributes.deadlineString))
           },
           error: error => {
@@ -112,10 +122,16 @@ Page({
     if (_this.data.session.expired) { return }
     // res.currentTarget.dataset.id是cell的index
     var index = res.currentTarget.dataset.id
+
+    // 不允许重复点选
+    if (_this.data.indexOfCellVoted == index) { return }
+    _this.setData({ indexOfCellVoted: index})
+
     wx.setStorage({
       key: _this.data.session.objectId,
       data: _this.data.votes[index].objectId,
     })
+
     saveVote(
       _this.data.indexOfCellVoted,
       index)
@@ -151,14 +167,14 @@ Page({
 })
 
 function handleInitialSessionData(id, deadlineString, title, voteIDs, openIDs, isSessionCreator, expired) {
+
   var localSession = new Objects.Session(id, deadlineString, title, voteIDs, openIDs)
   localSession.expired = expired
-  _this.setData({
-    session: localSession
-  })
 
-  // 是否session的创建者，决定是否显示结束投票按键
-  _this.setData({ isSessionCreator: isSessionCreator })
+  _this.setData({
+    session: localSession, 
+    isSessionCreator: isSessionCreator // 是否session的创建者，决定是否显示结束投票按键
+  })
 
   fetchVotes(function () {
 
@@ -171,18 +187,28 @@ function handleInitialSessionData(id, deadlineString, title, voteIDs, openIDs, i
         (_this.data.maxVoteCount != 0 && _this.data.votes.length == 1)
       _this.setData({ hasUniqueWinner: hasUniqueWinner})
     } else {
-      //highlight用户之前选中的选项，如果有的话
+      //highlight用户之前选中的选项，如果有的话. 并且赋值indexOfCellVoted，避免重复点击
+      console.log("*********************************")
+      console.log(_this.data.session)
+      console.log(_this.data.session.objectId)
       wx.getStorage({
         key: _this.data.session.objectId,
         success: function (res) {
+          console.log("从db获取之前选中的选项成功")
           for (var index in _this.data.votes) {
             if (_this.data.votes[index].objectId == res.data) {
-              _this.data.indexOfCellVoted = index // 需初始化，用户更新选项时count才不会出错
+              console.log("找到了对应的vote，开始赋值")
+              // 需初始化，用户更新选项时count才不会出错
+              _this.setData({ indexOfCellVoted : index}) 
               updateCellBgColorAtIndex(index)
+
               break
             }
           }
         },
+        fail: function(error) {
+          console.log("从db获取之前选中的选项失败")
+        }
       })
     }
   })
